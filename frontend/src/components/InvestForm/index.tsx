@@ -14,12 +14,10 @@ import { ThunderboltOutlined } from "@ant-design/icons";
 
 // dotenvConfig();
 
-// const privateKey = process.env.PRIVATE_KEY as string;
+const privateKey = process.env.PRIVATE_KEY as string;
 // Amount to transfer in USDC
-const amountToTransfer = 0.1;
 // Source chain and destination chain, options are "sepolia", "avalanche-fuji", "arbitrum-sepolia", "op-sepolia-testnet" and "base-sepolia-testnet".
 
-// const privateKey = process.env.PRIVATE_KEY as string;
 
 const { Text, Title } = Typography;
 const { Option } = Select;
@@ -51,7 +49,7 @@ export default function InvestForm({ startup, onSubmit, onCancel }: Props) {
 
 
 
-  const main = async () => {
+  const ccptTransfer = async () => {
     const sourceChainObject = Networks[sourceChain];
     const destinationChainObject = Networks[destinationChain];
     const sourceChainSDK = ThirdwebSDK.fromPrivateKey(privateKey, sourceChainObject.network, {
@@ -65,7 +63,7 @@ export default function InvestForm({ startup, onSubmit, onCancel }: Props) {
   
     console.log(
       "Transfering",
-      amountToTransfer,
+      amountToInvest,
       "USDC from",
       sourceChainObject.name,
       "to",
@@ -91,13 +89,15 @@ export default function InvestForm({ startup, onSubmit, onCancel }: Props) {
   
   
     // AVAX destination address
-    const destinationAddressInBytes32 = ethers.utils.defaultAbiCoder.encode(
-      ["address"],
-      [destinationAddress]
-    );
+    // const destinationAddressInBytes32 = ethers.encodeBytes32String(ethers.AbiCoder.defaultAbiCoder((
+    //   ["address"],
+    //   [destinationAddress]
+    // ));
   
+    const destinationAddressInBytes32 = ethers.encodeBytes32String(destinationAddress);
+
     // Amount that will be transferred
-    const amount = amountToTransfer * 10 ** 6;
+    const amount = amountToInvest * 10 ** 6;
   
     // STEP 1: Approve messenger contract to withdraw from our active eth address
     console.log(`Approving USDC transfer on ${sourceChainObject.name}...`);
@@ -122,17 +122,21 @@ export default function InvestForm({ startup, onSubmit, onCancel }: Props) {
   
     // STEP 3: Retrieve message bytes from logs
     const transactionReceipt = burnUSDC.receipt;
-    const eventTopic = ethers.utils.keccak256(
-      ethers.utils.toUtf8Bytes("MessageSent(bytes)")
+    const eventTopic = ethers.keccak256(
+      ethers.toUtf8Bytes("MessageSent(bytes)")
     );
     const log = transactionReceipt.logs.find(
       (l: any) => l.topics[0] === eventTopic
     );
-    const messageBytes = ethers.utils.defaultAbiCoder.decode(
-      ["bytes"],
-      log.data
-    )[0];
-    const messageHash = ethers.utils.keccak256(messageBytes);
+    // const messageBytes = ethers.defaultAbiCoder.decode(
+    //   ["bytes"],
+    //   log.data
+    // )[0];
+    const messageBytes = ethers.decodeBytes32String(log.data);
+
+
+
+    const messageHash = ethers.keccak256(messageBytes);
   
     // STEP 4: Fetch attestation signature
     console.log("Fetching attestation signature...");
