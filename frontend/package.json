@@ -9,10 +9,13 @@
     "build": "vite build"
   },
   "dependencies": {
+    "@ant-design/charts": "^2.0.3",
     "@ant-design/icons": "^5.3.0",
     "@carbon/icons-react": "^11.34.1",
     "@carbon/react": "^1.48.1",
     "@tanstack/react-query": "^5.28.4",
+    "@thirdweb-dev/chains": "^0.1.80",
+    "@thirdweb-dev/sdk": "^4.0.47",
     "@web3modal/wagmi": "^4.1.1",
     "@worldcoin/idkit": "^1.1.4",
     "antd": "^5.14.1",
@@ -22,7 +25,7 @@
     "carbon-components": "^10.58.12",
     "carbon-components-react": "^8.48.1",
     "carbon-icons": "^7.0.7",
-    "dotenv": "^16.3.1",
+    "dotenv": "^16.4.5",
     "ethers": "^6.11.1",
     "history": "^5.3.0",
     "install": "^0.13.0",

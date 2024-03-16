@@ -1,6 +1,6 @@
 import "./styles.css";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Avatar,
   Button,
@@ -21,6 +21,7 @@ import { useNotification } from "@hooks/NotificationContext";
 import { LoadingOutlined } from "@ant-design/icons";
 import { IDKitWidget, VerificationLevel } from "@worldcoin/idkit";
 
+
 const { currency } = config;
 
 const { Title, Text } = Typography;
@@ -37,6 +38,8 @@ export interface ProjectType {
 }
 
 const addGrantLabel = "Add Grant";
+
+
 
 function Detail({ name, value }) {
   return (
@@ -64,6 +67,9 @@ export default function Home() {
 
   const closeModal = () => setShotAddGrant(false);
   const openModal = () => setShotAddGrant(true);
+
+
+
 
   const addGrant = (formData) => {
     setAddingGrant(true);

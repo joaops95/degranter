@@ -1,12 +1,28 @@
 import { ProjectType } from "@pages/Startup";
 import { calculateTotalInterest, formatNumber } from "@utils/index";
 // import { calculateMonthlyYield } from "@utils/index";
-import { Button, Form, Input, InputNumber, Typography } from "antd";
+import { Button, Form, Input, InputNumber, Typography, Select } from "antd";
 import { useState, useEffect } from "react";
 import { config } from "@data/config";
 import { LoadingOutlined } from "@ant-design/icons";
 
+import { Networks } from "../../consts/chains";
+import { config as dotenvConfig } from "dotenv";
+import { ThirdwebSDK, SmartContract } from "@thirdweb-dev/sdk";
+import { ethers } from "ethers";
+import { ThunderboltOutlined } from "@ant-design/icons";
+
+// dotenvConfig();
+
+// const privateKey = process.env.PRIVATE_KEY as string;
+// Amount to transfer in USDC
+const amountToTransfer = 0.1;
+// Source chain and destination chain, options are "sepolia", "avalanche-fuji", "arbitrum-sepolia", "op-sepolia-testnet" and "base-sepolia-testnet".
+
+// const privateKey = process.env.PRIVATE_KEY as string;
+
 const { Text, Title } = Typography;
+const { Option } = Select;
 const currency = config.currency;
 
 const layout = {
@@ -22,11 +38,129 @@ type Props = {
 export default function InvestForm({ startup, onSubmit, onCancel }: Props) {
   const [amountToInvest, setAmountToInvest] = useState(0);
   const [ethToFiatRatio, setEthToFiatRatio] = useState(null);
+  const [sourceChain, setSourceChain] = useState("avalanche-fuji");
+  const [destinationChain, setDestinationChain] = useState(
+    "base-sepolia-testnet"
+  );
+
   // const monthlyYield = calculateMonthlyYield(
   //   amountToInvest,
   //   startup.apy,
   //   startup.nInstallments
   // );
+
+
+
+  const main = async () => {
+    const sourceChainObject = Networks[sourceChain];
+    const destinationChainObject = Networks[destinationChain];
+    const sourceChainSDK = ThirdwebSDK.fromPrivateKey(privateKey, sourceChainObject.network, {
+      secretKey: process.env.SECRET_KEY as string,
+    });
+    const destinationChainSdk = ThirdwebSDK.fromPrivateKey(privateKey, destinationChainObject.network, {
+      secretKey: process.env.SECRET_KEY as string,
+    });
+
+    const destinationAddress = await destinationChainSdk.wallet.getAddress();
+  
+    console.log(
+      "Transfering",
+      amountToTransfer,
+      "USDC from",
+      sourceChainObject.name,
+      "to",
+      destinationChainObject.name
+    );
+    console.log("Wallet Address:", destinationAddress);
+  
+    // Testnet Contract Addresses
+    const TOKEN_MESSENGER_CONTRACT_ADDRESS = sourceChainObject.tokenMessengerContract;
+    const USDC_CONTRACT_ADDRESS = sourceChainObject.usdcContract;
+    const MESSAGE_TRANSMITTER_CONTRACT_ADDRESS = destinationChainObject.messageTransmitterContract;
+    const DESTINATION_DOMAIN = destinationChainObject.domain;
+  
+    // initialize contracts
+    const ethTokenMessengerContract = await sourceChainSDK.getContract(
+      TOKEN_MESSENGER_CONTRACT_ADDRESS
+    );
+    const usdcEthContract = await sourceChainSDK.getContract(
+      USDC_CONTRACT_ADDRESS
+    );
+    const messageTransmitterContract =
+      await destinationChainSdk.getContract(MESSAGE_TRANSMITTER_CONTRACT_ADDRESS);
+  
+  
+    // AVAX destination address
+    const destinationAddressInBytes32 = ethers.utils.defaultAbiCoder.encode(
+      ["address"],
+      [destinationAddress]
+    );
+  
+    // Amount that will be transferred
+    const amount = amountToTransfer * 10 ** 6;
+  
+    // STEP 1: Approve messenger contract to withdraw from our active eth address
+    console.log(`Approving USDC transfer on ${sourceChainObject.name}...`);
+    const approveMessengerWithdraw = await usdcEthContract.call("approve", [
+      TOKEN_MESSENGER_CONTRACT_ADDRESS,
+      amount,
+    ]);
+    console.log(
+      "Approved - txHash:",
+      approveMessengerWithdraw.receipt.transactionHash
+    );
+  
+    // STEP 2: Burn USDC
+    console.log(`Depositing USDC to Token Messenger contract on ${sourceChainObject.name}...`);
+    const burnUSDC = await ethTokenMessengerContract.call("depositForBurn", [
+      amount,
+      DESTINATION_DOMAIN,
+      destinationAddressInBytes32,
+      USDC_CONTRACT_ADDRESS,
+    ]);
+    console.log("Deposited - txHash:", burnUSDC.receipt.transactionHash);
+  
+    // STEP 3: Retrieve message bytes from logs
+    const transactionReceipt = burnUSDC.receipt;
+    const eventTopic = ethers.utils.keccak256(
+      ethers.utils.toUtf8Bytes("MessageSent(bytes)")
+    );
+    const log = transactionReceipt.logs.find(
+      (l: any) => l.topics[0] === eventTopic
+    );
+    const messageBytes = ethers.utils.defaultAbiCoder.decode(
+      ["bytes"],
+      log.data
+    )[0];
+    const messageHash = ethers.utils.keccak256(messageBytes);
+  
+    // STEP 4: Fetch attestation signature
+    console.log("Fetching attestation signature...");
+    let attestationResponse = { status: "pending" };
+    while (attestationResponse.status !== "complete") {
+      const response = await fetch(
+        `https://iris-api-sandbox.circle.com/attestations/${messageHash}`
+      );
+      attestationResponse = await response.json();
+      console.log("Attestation Status:", attestationResponse.status || "sent");
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+  
+    const attestationSignature = attestationResponse.attestation;
+    console.log(`Obtained Signature: ${attestationSignature}`);
+  
+    // STEP 5: Using the message bytes and signature recieve the funds on destination chain and address
+    console.log(`Receiving funds on ${destinationChainObject.name}...`);
+    const receiveTx = await messageTransmitterContract.call(
+      "receiveMessage",
+      [messageBytes, attestationSignature]
+    );
+    console.log(
+      "Received funds successfully - txHash:",
+      receiveTx.receipt.transactionHash
+    );
+  };
+
 
   const fiatToInvest =
     ethToFiatRatio !== null ? amountToInvest * ethToFiatRatio : null;
@@ -63,6 +197,35 @@ export default function InvestForm({ startup, onSubmit, onCancel }: Props) {
         Invest up to {currency}
         {formatNumber(maxAmount)}
       </Text>
+      <div style={{ marginBottom: "20px" }} />
+
+      <Form.Item label="Source Chain" name="sourceChain">
+        <Select
+          onChange={(value) => setSourceChain(value)}
+          suffixIcon={<ThunderboltOutlined />}
+        >
+          {Object.values(Networks).map((chain) => (
+            <Option key={chain.name} value={chain.name}>
+              <span>{chain.name}</span>
+            </Option>
+          ))}
+        </Select>
+      </Form.Item>
+      <Form.Item label="Destination Chain" name="destinationChain">
+        <Select
+          onChange={(value) => setDestinationChain(value)}
+          suffixIcon={<ThunderboltOutlined />}
+        >
+          {Object.values([
+            Networks["base-sepolia-testnet"]
+          ]).map((chain) => (
+            <Option key={chain.name} value={chain.name}>
+              <span>{chain.name}</span>
+            </Option>
+          ))}
+        </Select>
+      </Form.Item>
+
       <Form
         {...layout}
         name="nest-messages"
@@ -100,7 +263,12 @@ export default function InvestForm({ startup, onSubmit, onCancel }: Props) {
                     {currency}
                     {fiatToInvest.toFixed(2)}
                   </>
-                ) : <><LoadingOutlined/><span>Fetching conversion rates...</span></>}
+                ) : (
+                  <>
+                    <LoadingOutlined />
+                    <span>Fetching conversion rates...</span>
+                  </>
+                )}
               </div>
             </div>
           </Form.Item>
