@@ -11,6 +11,7 @@ import { config as dotenvConfig } from "dotenv";
 import { ThirdwebSDK, SmartContract } from "@thirdweb-dev/sdk";
 import { ethers } from "ethers";
 import { ThunderboltOutlined } from "@ant-design/icons";
+import useTokenMessenger from '@hooks/useTokenMessenger'
 
 // dotenvConfig();
 
@@ -56,6 +57,38 @@ export default function InvestForm({ startup, onSubmit, onCancel }: Props) {
     const sourceChainObject = Networks[sourceChain];
     const destinationChainObject = Networks[destinationChain];
     
+
+
+    // try {
+    //   const { depositForBurn } = useTokenMessenger(sourceChainObject.chainId);
+
+
+    //   const response = await depositForBurn(
+    //     amountToInvest,
+    //     DestinationDomain[target as Chain],
+    //     address,
+    //     USDC_ADDRESS
+    //   )
+    //   if (!response) return
+
+    //   const { hash } = response
+
+    //   const transaction = {
+    //     ...formInputs,
+    //     hash,
+    //     type: TransactionType.SEND,
+    //     status: TransactionStatus.PENDING,
+    //   }
+
+    //   addTransaction(hash, transaction)
+
+    //   handleNext(hash)
+    //   setIsSending(false)
+    // } catch (err) {
+    //   console.error(err)
+    //   setIsSending(false)
+    // }
+
   };
 
 
