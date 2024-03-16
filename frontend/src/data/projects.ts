@@ -6,7 +6,7 @@ export const initialProjects: ProjectType[] = [
       name: "Tuskable",
       description: "The most promising startup in startup lisboa",
       grantAmount: 30000,
-      apy: 0.05,
+      apy: 0.10,
       nInstallments: 12,
       investedAmount: 1000,
     },

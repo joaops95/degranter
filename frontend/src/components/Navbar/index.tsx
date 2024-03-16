@@ -3,7 +3,9 @@ import { Menu } from "antd";
 import { LinkOutlined, RocketOutlined, StockOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { useWeb3Modal } from "@web3modal/wagmi/react";
-import { useAccount, useDisconnect } from 'wagmi'
+import { useAccount, useDisconnect } from "wagmi";
+// import logo from '@assets/full-logo.png'
+import logo from "@assets/logo.svg";
 
 export default function Navbar() {
   const { open } = useWeb3Modal();
@@ -13,12 +15,10 @@ export default function Navbar() {
   const loggedOutNavbar = [
     {
       key: "Connect Wallet",
-      label: (
-        <span onClick={() => open()}>Connect your wallet!</span>
-      ),
+      label: <span onClick={() => open()}>Connect your wallet!</span>,
       icon: <LinkOutlined />,
-    }
-  ]
+    },
+  ];
 
   const loggedInNavbar = [
     {
@@ -33,9 +33,7 @@ export default function Navbar() {
     },
     {
       key: "Log Out",
-      label: (
-        <span onClick={() => disconnect()}>Log out</span>
-      ),
+      label: <span onClick={() => disconnect()}>Log out</span>,
       icon: <LinkOutlined />,
     },
   ];
@@ -45,7 +43,7 @@ export default function Navbar() {
     <div className="navbar">
       <Link to="/">
         <div className="home">
-          <img src="logo.svg" />
+          <img src={logo} />
         </div>
       </Link>
       <Menu
