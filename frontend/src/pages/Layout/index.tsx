@@ -1,8 +1,6 @@
 import "./styles.css";
-import { Link } from "react-router-dom";
 import { Layout, theme } from "antd";
-import { GithubOutlined } from "@ant-design/icons";
-const { Header, Footer, Content } = Layout;
+const { Header, Content } = Layout;
 
 export default function MyLayout({ navBar, content }) {
   const {
