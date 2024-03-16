@@ -73,5 +73,34 @@ contract ProjectSubmission is Ownable(msg.sender) {
     function getProjectCount() public view returns (uint256) {
         return projectCount;
     }
+
+    function updateProject(
+        uint256 _projectId,
+        string memory _name,
+        string memory _description,
+        uint256 _monthlyYield,
+        uint256 _grantTotal,
+        uint256 _period
+    ) public {
+        require(_projectId < projectCount, "Invalid project ID");
+        require(projects[_projectId].creator == msg.sender, "Only the creator can update the project");
+
+        projects[_projectId].name = _name;
+        projects[_projectId].description = _description;
+        projects[_projectId].monthlyYield = _monthlyYield;
+        projects[_projectId].grantTotal = _grantTotal;
+        projects[_projectId].period = _period;
+
+        emit ProjectUpdated(_projectId, _name, _description, _monthlyYield, _grantTotal, _period);
+    }
+
+    function deleteProject(uint256 _projectId) public {
+        require(_projectId < projectCount, "Invalid project ID");
+        require(projects[_projectId].creator == msg.sender, "Only the creator can delete the project");
+
+        delete projects[_projectId];
+
+        emit ProjectDeleted(_projectId);
+    }
   
 }

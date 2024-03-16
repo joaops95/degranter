@@ -19,6 +19,7 @@ import useReadProjects from "@hooks/useReadProjects";
 import useAddProject from "@hooks/useAddProject";
 import { useNotification } from "@hooks/NotificationContext";
 import { LoadingOutlined } from "@ant-design/icons";
+import { IDKitWidget, VerificationLevel } from "@worldcoin/idkit";
 
 const { currency } = config;
 
@@ -93,6 +94,33 @@ export default function Home() {
     closeModal();
   };
 
+  const verifyProof = async (proof) => {
+    console.log("proof", proof);
+    const response = await fetch(
+      "https://developer.worldcoin.org/api/v1/verify/app_staging_129259332fd6f93d4fabaadcc5e4ff9d",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ...proof, action: "test" }),
+      }
+    );
+    if (response.ok) {
+      const { verified } = await response.json();
+      return verified;
+    } else {
+      const { code, detail } = await response.json();
+      throw new Error(`Error Code ${code}: ${detail}`);
+    }
+  };
+
+  // TODO: Functionality after verifying
+  const onSuccess = () => {
+    console.log("Success");
+    setShotAddGrant(true);
+  };
+
   return (
     <>
       <Title level={2}>Your grants</Title>
@@ -107,17 +135,30 @@ export default function Home() {
       <List
         className="demo-loadmore-list"
         header={
-          <div className="d-flex">
-            <Button onClick={openModal} disabled={addingGrant}>
-              {addGrantLabel}
-            </Button>
-            {addingGrant && (
-              <>
-                <LoadingOutlined />
-                <span>Tokenizing your grant...</span>
-              </>
-            )}
-          </div>
+          <IDKitWidget
+              app_id="app_staging_85617918652fbe5cc6550acb27a14e2c"
+              action="create-project"
+              false
+              style={{ width: "100%", zIndex: 1000 }}
+              verification_level={VerificationLevel.Device}
+              handleVerify={verifyProof}
+              onSuccess={onSuccess}
+            >
+              {({ open }) => (
+                <div className="d-flex">
+                <Button onClick={open} disabled={addingGrant}>
+                  {addGrantLabel}
+                </Button>
+                {addingGrant && (
+                  <>
+                    <LoadingOutlined />
+                    <span>Tokenizing your grant...</span>
+                  </>
+                )}
+              </div>
+              )}
+            </IDKitWidget>
+          
         }
         loading={isLoading}
         itemLayout="horizontal"
