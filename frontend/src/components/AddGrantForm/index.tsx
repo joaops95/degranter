@@ -1,7 +1,4 @@
 import { Button, Form, Input, InputNumber } from "antd";
-import { config } from "@data/config";
-
-const currency = config.currency
 
 const layout = {
   labelCol: { span: 8 },
@@ -29,7 +26,7 @@ export default function AddGrantForm({ onSubmit, onCancel }) {
       >
         <InputNumber
           placeholder={"Insert the granted amount"}
-          addonAfter={currency}
+          addonAfter='£'
           style={{ width: "100%" }}
         />
       </Form.Item>

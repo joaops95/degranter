@@ -22,8 +22,9 @@ import contractAddress from "../../../../backend/ignition/deployments/chain-8453
 
 import { initialProjects } from "@data/projects";
 import { config } from "@data/config";
+import { IDKitWidget, VerificationLevel } from "@worldcoin/idkit";
 
-const { currency } = config
+const { currency } = config;
 
 const { Title, Text } = Typography;
 
@@ -87,6 +88,33 @@ export default function Home() {
     closeModal();
   };
 
+  const verifyProof = async (proof) => {
+    console.log("proof", proof);
+    const response = await fetch(
+      "https://developer.worldcoin.org/api/v1/verify/app_staging_129259332fd6f93d4fabaadcc5e4ff9d",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ...proof, action: "test" }),
+      }
+    );
+    if (response.ok) {
+      const { verified } = await response.json();
+      return verified;
+    } else {
+      const { code, detail } = await response.json();
+      throw new Error(`Error Code ${code}: ${detail}`);
+    }
+  };
+
+  // TODO: Functionality after verifying
+  const onSuccess = () => {
+    console.log("Success");
+    setShotAddGrant(true);
+  };
+
   return (
     <>
       <Title level={2}>Your grants</Title>
@@ -102,11 +130,27 @@ export default function Home() {
         <List
           className="demo-loadmore-list"
           header={
-            <div className="d-flex">
-              <Button onClick={() => setShotAddGrant(true)}>
-                {addGrantLabel}
-              </Button>
-            </div>
+            <IDKitWidget
+              app_id="app_staging_85617918652fbe5cc6550acb27a14e2c"
+              action="create-project"
+              false
+              style={{ width: "100%", zIndex: 1000 }}
+              verification_level={VerificationLevel.Device}
+              handleVerify={verifyProof}
+              onSuccess={onSuccess}
+            >
+              {({ open }) => (
+                <Button onClick={open}>
+                  Verify in WorldCoin to add a grant
+                </Button>
+              )}
+            </IDKitWidget>
+
+            // <div className="d-flex">
+            //   <Button onClick={() => setShotAddGrant(true)}>
+            //     {addGrantLabel}
+            //   </Button>
+            // </div>
           }
           loading={initLoading}
           itemLayout="horizontal"
