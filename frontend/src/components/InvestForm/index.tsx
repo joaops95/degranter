@@ -14,7 +14,6 @@ import { ThunderboltOutlined } from "@ant-design/icons";
 
 // dotenvConfig();
 
-const privateKey = process.env.PRIVATE_KEY as string;
 // Amount to transfer in USDC
 // Source chain and destination chain, options are "sepolia", "avalanche-fuji", "arbitrum-sepolia", "op-sepolia-testnet" and "base-sepolia-testnet".
 
@@ -35,7 +34,7 @@ type Props = {
 };
 export default function InvestForm({ startup, onSubmit, onCancel }: Props) {
   const [amountToInvest, setAmountToInvest] = useState(0);
-  const [ethToFiatRatio, setEthToFiatRatio] = useState(null);
+  const [ethToFiatRatio, setEthToFiatRatio] = useState(4071.5);
   const [sourceChain, setSourceChain] = useState("avalanche-fuji");
   const [destinationChain, setDestinationChain] = useState(
     "base-sepolia-testnet"
@@ -50,119 +49,13 @@ export default function InvestForm({ startup, onSubmit, onCancel }: Props) {
 
 
   const ccptTransfer = async () => {
+    const privateKey = import.meta.env.VITE_PRIVATE_KEY as string;
+    console.log("sourceChainObject", Networks);
+    console.log("sourceChainObject", sourceChain);
+
     const sourceChainObject = Networks[sourceChain];
     const destinationChainObject = Networks[destinationChain];
-    const sourceChainSDK = ThirdwebSDK.fromPrivateKey(privateKey, sourceChainObject.network, {
-      secretKey: process.env.SECRET_KEY as string,
-    });
-    const destinationChainSdk = ThirdwebSDK.fromPrivateKey(privateKey, destinationChainObject.network, {
-      secretKey: process.env.SECRET_KEY as string,
-    });
-
-    const destinationAddress = await destinationChainSdk.wallet.getAddress();
-  
-    console.log(
-      "Transfering",
-      amountToInvest,
-      "USDC from",
-      sourceChainObject.name,
-      "to",
-      destinationChainObject.name
-    );
-    console.log("Wallet Address:", destinationAddress);
-  
-    // Testnet Contract Addresses
-    const TOKEN_MESSENGER_CONTRACT_ADDRESS = sourceChainObject.tokenMessengerContract;
-    const USDC_CONTRACT_ADDRESS = sourceChainObject.usdcContract;
-    const MESSAGE_TRANSMITTER_CONTRACT_ADDRESS = destinationChainObject.messageTransmitterContract;
-    const DESTINATION_DOMAIN = destinationChainObject.domain;
-  
-    // initialize contracts
-    const ethTokenMessengerContract = await sourceChainSDK.getContract(
-      TOKEN_MESSENGER_CONTRACT_ADDRESS
-    );
-    const usdcEthContract = await sourceChainSDK.getContract(
-      USDC_CONTRACT_ADDRESS
-    );
-    const messageTransmitterContract =
-      await destinationChainSdk.getContract(MESSAGE_TRANSMITTER_CONTRACT_ADDRESS);
-  
-  
-    // AVAX destination address
-    // const destinationAddressInBytes32 = ethers.encodeBytes32String(ethers.AbiCoder.defaultAbiCoder((
-    //   ["address"],
-    //   [destinationAddress]
-    // ));
-  
-    const destinationAddressInBytes32 = ethers.encodeBytes32String(destinationAddress);
-
-    // Amount that will be transferred
-    const amount = amountToInvest * 10 ** 6;
-  
-    // STEP 1: Approve messenger contract to withdraw from our active eth address
-    console.log(`Approving USDC transfer on ${sourceChainObject.name}...`);
-    const approveMessengerWithdraw = await usdcEthContract.call("approve", [
-      TOKEN_MESSENGER_CONTRACT_ADDRESS,
-      amount,
-    ]);
-    console.log(
-      "Approved - txHash:",
-      approveMessengerWithdraw.receipt.transactionHash
-    );
-  
-    // STEP 2: Burn USDC
-    console.log(`Depositing USDC to Token Messenger contract on ${sourceChainObject.name}...`);
-    const burnUSDC = await ethTokenMessengerContract.call("depositForBurn", [
-      amount,
-      DESTINATION_DOMAIN,
-      destinationAddressInBytes32,
-      USDC_CONTRACT_ADDRESS,
-    ]);
-    console.log("Deposited - txHash:", burnUSDC.receipt.transactionHash);
-  
-    // STEP 3: Retrieve message bytes from logs
-    const transactionReceipt = burnUSDC.receipt;
-    const eventTopic = ethers.keccak256(
-      ethers.toUtf8Bytes("MessageSent(bytes)")
-    );
-    const log = transactionReceipt.logs.find(
-      (l: any) => l.topics[0] === eventTopic
-    );
-    // const messageBytes = ethers.defaultAbiCoder.decode(
-    //   ["bytes"],
-    //   log.data
-    // )[0];
-    const messageBytes = ethers.decodeBytes32String(log.data);
-
-
-
-    const messageHash = ethers.keccak256(messageBytes);
-  
-    // STEP 4: Fetch attestation signature
-    console.log("Fetching attestation signature...");
-    let attestationResponse = { status: "pending" };
-    while (attestationResponse.status !== "complete") {
-      const response = await fetch(
-        `https://iris-api-sandbox.circle.com/attestations/${messageHash}`
-      );
-      attestationResponse = await response.json();
-      console.log("Attestation Status:", attestationResponse.status || "sent");
-      await new Promise((r) => setTimeout(r, 2000));
-    }
-  
-    const attestationSignature = attestationResponse.attestation;
-    console.log(`Obtained Signature: ${attestationSignature}`);
-  
-    // STEP 5: Using the message bytes and signature recieve the funds on destination chain and address
-    console.log(`Receiving funds on ${destinationChainObject.name}...`);
-    const receiveTx = await messageTransmitterContract.call(
-      "receiveMessage",
-      [messageBytes, attestationSignature]
-    );
-    console.log(
-      "Received funds successfully - txHash:",
-      receiveTx.receipt.transactionHash
-    );
+    
   };
 
 
@@ -170,15 +63,15 @@ export default function InvestForm({ startup, onSubmit, onCancel }: Props) {
     ethToFiatRatio !== null ? amountToInvest * ethToFiatRatio : null;
 
   useEffect(() => {
-    const fn = async () => {
-      const response = await fetch(
-        "https://cors-anywhere.herokuapp.com/https://api.coingecko.com/api/v3/simple/price?ids=ethereum,tether&vs_currencies=usd"
-      );
-      const data = await response.json();
-      const ethToUsdtRate = data.ethereum.usd / data.tether.usd;
-      return ethToUsdtRate;
-    };
-    fn().then((rate) => setEthToFiatRatio(rate));
+    // const fn = async () => {
+    //   const response = await fetch(
+    //     "https://cors-anywhere.herokuapp.com/https://api.coingecko.com/api/v3/simple/price?ids=ethereum,tether&vs_currencies=usd"
+    //   );
+    //   const data = await response.json();
+    //   const ethToUsdtRate = data.ethereum.usd / data.tether.usd;
+    //   return ethToUsdtRate;
+    // };
+    // fn().then((rate) => setEthToFiatRatio(rate));
   }, []);
 
   const maxAmount = startup.grantAmount - startup.investedAmount;
@@ -208,9 +101,9 @@ export default function InvestForm({ startup, onSubmit, onCancel }: Props) {
           onChange={(value) => setSourceChain(value)}
           suffixIcon={<ThunderboltOutlined />}
         >
-          {Object.values(Networks).map((chain) => (
-            <Option key={chain.name} value={chain.name}>
-              <span>{chain.name}</span>
+          {Object.entries(Networks).map(([key, value]) => (
+            <Option key={key} value={key}>
+              <span>{value.name}</span>
             </Option>
           ))}
         </Select>
@@ -220,11 +113,11 @@ export default function InvestForm({ startup, onSubmit, onCancel }: Props) {
           onChange={(value) => setDestinationChain(value)}
           suffixIcon={<ThunderboltOutlined />}
         >
-          {Object.values([
+          {Object.entries([
             Networks["base-sepolia-testnet"]
-          ]).map((chain) => (
-            <Option key={chain.name} value={chain.name}>
-              <span>{chain.name}</span>
+          ]).map(([key, value]) => (
+            <Option key={key} value={key}>
+              <span>{value.name}</span>
             </Option>
           ))}
         </Select>
@@ -298,6 +191,16 @@ export default function InvestForm({ startup, onSubmit, onCancel }: Props) {
             </Text>
           </div>
         </div>
+        
+        {sourceChain !== "sepolia" && (
+          <Form.Item wrapperCol={{ ...layout.wrapperCol, offset: 8 }}>
+            <Button type="default" onClick={ccptTransfer}>
+              Confirm cross-chain transfer
+            </Button>
+          </Form.Item>
+        )}
+
+
 
         <Form.Item wrapperCol={{ ...layout.wrapperCol, offset: 8 }}>
           <Button type="default" onClick={onCancel}>
