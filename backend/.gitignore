@@ -28,6 +28,8 @@ node_modules
 /coverage
 /coverage.json
 
+ignition/deployments/
+
 node_modules/
 package-lock.json
 .env
