@@ -26,3 +26,42 @@ export function formatNumber(number: number): string {
 
   return formattedNumber;
 }
+
+export function calculateTotalYield(
+  amount: number,
+  apy: number,
+  numberOfInstallments: number
+): number {
+  // Convert APY to monthly interest rate
+  const monthlyInterestRate = apy / 12;
+
+  // Calculate monthly payment using the formula for the present value of an annuity
+  const monthlyPayment =
+    amount *
+    (monthlyInterestRate /
+      (1 - Math.pow(1 + monthlyInterestRate, -numberOfInstallments)));
+
+  // Calculate total amount paid
+  const totalAmountPaid = monthlyPayment * numberOfInstallments;
+
+  // Calculate total interest paid
+  const totalInterestPaid = totalAmountPaid - amount;
+
+  // Calculate monthly yield
+  const monthlyYield = totalInterestPaid / numberOfInstallments;
+
+  return monthlyYield;
+}
+
+export function calculateTotalInterest(amount, apy, numberOfInstallments) {
+  // Convert APY to decimal and monthly interest rate
+  const monthlyInterestRate = apy / 12;
+
+  // Calculate total amount received using compound interest formula
+  const totalAmountReceived = amount * Math.pow(1 + monthlyInterestRate, numberOfInstallments);
+
+  // Calculate total interest received
+  const totalInterestReceived = totalAmountReceived - amount;
+
+  return totalInterestReceived;
+}

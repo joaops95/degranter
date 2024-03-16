@@ -13,10 +13,14 @@ import {
 } from "antd";
 import AddGrantForm from "@components/AddGrantForm";
 import { formatNumber, max } from "../../utils";
+import { initialProjects } from "@data/projects";
+import { config } from "@data/config";
+
+const { currency } = config
 
 const { Title, Text } = Typography;
 
-interface ProjectType {
+export interface ProjectType {
   id: number;
   name: string;
   description: string;
@@ -28,36 +32,6 @@ interface ProjectType {
 }
 
 const addGrantLabel = "Add Grant";
-
-const initialProjects: ProjectType[] = [
-  {
-    id: 1,
-    name: "Tuskable",
-    description: "The most promising startup in startup lisboa",
-    grantAmount: 30000,
-    apy: 0.1,
-    nInstallments: 12,
-    investedAmount: 1000,
-  },
-  {
-    id: 2,
-    name: "Mystic",
-    description: "The most promising startup in Pool Side",
-    grantAmount: 15000,
-    apy: 0.1,
-    nInstallments: 12,
-    investedAmount: 300,
-  },
-  {
-    id: 3,
-    name: "Super TTT",
-    description: "The coolest game ever",
-    grantAmount: 1000,
-    apy: 0.1,
-    nInstallments: 12,
-    investedAmount: 100,
-  },
-];
 
 function Detail({ name, value }) {
   return (
@@ -102,7 +76,7 @@ export default function Home() {
     <>
       <Title level={2}>Your grants</Title>
       <Modal
-        title={addGrantLabel}
+        title={`addGrantLabel`}
         open={showAddGrant}
         footer={<></>}
         onCancel={closeModal}
@@ -122,14 +96,7 @@ export default function Home() {
         itemLayout="horizontal"
         dataSource={data}
         renderItem={(item) => (
-          <List.Item
-            actions={
-              [
-                // <a key="list-loadmore-edit">edit</a>,
-                // <a key="list-loadmore-more">more</a>,
-              ]
-            }
-          >
+          <List.Item>
             <Skeleton avatar title={false} loading={false} active>
               <List.Item.Meta
                 avatar={
@@ -152,20 +119,17 @@ export default function Home() {
               >
                 <Detail
                   name="Grant Amount"
-                  value={`${formatNumber(item.grantAmount)}£`}
+                  value={`${formatNumber(item.grantAmount)}${currency}`}
                 />
-                <Detail name="APY" value={`${item.apy * 100}%`} />
-                <Detail name="Limit" value={`${item.nInstallments} months`} />
+                <Detail name="APY" value={`${(item.apy * 100).toFixed(2)}%`} />
+                <Detail name="# Installments" value={item.nInstallments} />
                 <Tooltip
                   title={`Received ${formatNumber(
                     item.investedAmount
-                  )}£ out of ${formatNumber(item.grantAmount)}£`}
+                  )}${currency} out of ${formatNumber(item.grantAmount)}${currency}`}
                 >
                   <Progress
                     percent={(item.investedAmount / item.grantAmount) * 100}
-                    // format={(percent) =>
-
-                    // }
                     showInfo={false}
                     status="active"
                   />
