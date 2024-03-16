@@ -1,6 +1,6 @@
 import "./styles.css";
 
-import { useEffect, useState, useMemo } from "react";
+import { useState } from "react";
 import {
   Avatar,
   Button,
@@ -12,15 +12,8 @@ import {
   Tooltip,
 } from "antd";
 import AddGrantForm from "@components/AddGrantForm";
-import { formatNumber, max } from "../../utils";
-import { useReadContract, useWriteContract } from "wagmi";
-import { ethers } from "ethers";
-import { WagmiProvider } from "wagmi";
+import { formatNumber } from "../../utils";
 
-import TokenArtifact from "../../../../backend/artifacts/contracts/ProjectSubmission.sol/ProjectSubmission.json";
-import contractAddress from "../../../../backend/ignition/deployments/chain-84532/deployed_addresses.json";
-
-import { initialProjects } from "@data/projects";
 import { config } from "@data/config";
 import useReadProjects from "@hooks/useReadProjects";
 import useAddProject from "@hooks/useAddProject";
@@ -60,7 +53,6 @@ function Detail({ name, value }) {
 }
 
 export default function Home() {
-  const [initLoading, setInitLoading] = useState(false);
   const [addingGrant, setAddingGrant] = useState(false);
   const { api: notificationApi } = useNotification();
 
@@ -73,7 +65,7 @@ export default function Home() {
   const openModal = () => setShotAddGrant(true);
 
   const addGrant = (formData) => {
-    setAddingGrant(true)
+    setAddingGrant(true);
     const { name, description, grantAmount, apy, nInstallments } = formData;
     addProject({
       name,
@@ -116,29 +108,22 @@ export default function Home() {
         className="demo-loadmore-list"
         header={
           <div className="d-flex">
-            <Button
-              onClick={() => setShotAddGrant(true)}
-              disabled={addingGrant}
-            >
+            <Button onClick={openModal} disabled={addingGrant}>
               {addGrantLabel}
             </Button>
-            {
-              addingGrant && <><LoadingOutlined/><span>Tokenizing your grant...</span></>
-            }
+            {addingGrant && (
+              <>
+                <LoadingOutlined />
+                <span>Tokenizing your grant...</span>
+              </>
+            )}
           </div>
         }
         loading={isLoading}
         itemLayout="horizontal"
         dataSource={projects}
         renderItem={(item) => (
-          <List.Item
-            actions={
-              [
-                // <a key="list-loadmore-edit">edit</a>,
-                // <a key="list-loadmore-more">more</a>,
-              ]
-            }
-          >
+          <List.Item>
             <Skeleton avatar title={false} loading={false} active>
               <List.Item.Meta
                 avatar={

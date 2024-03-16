@@ -10,11 +10,15 @@ import {
   Modal,
   Progress,
   Tooltip,
+  notification,
 } from "antd";
 import InvestForm from "@components/InvestForm";
 import { formatNumber, max } from "../../utils";
 import { initialProjects } from "@data/projects";
 import { config } from "@data/config";
+import useReadProjects from "@hooks/useReadProjects";
+import { useNotification } from "@hooks/NotificationContext";
+import useInvestOnProject from "@hooks/useInvestOnProject";
 
 const { currency } = config;
 
@@ -51,11 +55,15 @@ function Detail({ name, value }) {
 export default function Home() {
   const [initLoading, setInitLoading] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<ProjectType[]>(initialProjects);
   const [showInvestForm, setShowInvestForm] = useState(false);
   const [selectedIdx, setSelectedIdx] = useState(null);
+  const [investingOnProject, setInvestingOnProject] = useState(false);
 
-  const selectedStartup = data[selectedIdx];
+  const { api: notificationApi } = useNotification();
+  const { projects, isLoading, refetch: refreshProjects } = useReadProjects();
+  const { investOnProject } = useInvestOnProject();
+
+  const selectedStartup = projects?.[selectedIdx];
 
   const closeModal = () => {
     setSelectedIdx(null);
@@ -68,19 +76,29 @@ export default function Home() {
   };
 
   const invest = (startupIdx, amount) => {
-    console.log(startupIdx, amount);
-    const startup = data[startupIdx];
-    setData((prev) =>
-      prev.map((s) =>
-        s.id === startup.id
-          ? {
-              ...s,
-              investedAmount: startup.investedAmount + amount,
-            }
-          : s
-      )
-    );
-    closeModal();
+    setInvestingOnProject(true);
+    const startup = projects[startupIdx];
+
+    investOnProject({
+      projectId: startup.id,
+      amount: amount,
+      onSuccess: () => {
+        console.log("Yeeeey");
+        setInvestingOnProject(false);
+        closeModal();
+      },
+      onError: (error) => {
+        console.log("Error", error.details);
+        if (!error) {
+          notificationApi.error({
+            message: "Something went wrong",
+            description: "Could not invest on startup",
+          });
+        }
+        setInvestingOnProject(false);
+        closeModal();
+      },
+    });
   };
 
   return (
@@ -103,9 +121,9 @@ export default function Home() {
       )}
       <List
         className="demo-loadmore-list"
-        loading={initLoading}
+        loading={isLoading}
         itemLayout="horizontal"
-        dataSource={data}
+        dataSource={projects}
         renderItem={(item, idx) => (
           <List.Item
             actions={[
@@ -147,9 +165,6 @@ export default function Home() {
                 >
                   <Progress
                     percent={(item.investedAmount / item.grantAmount) * 100}
-                    // format={(percent) =>
-
-                    // }
                     showInfo={false}
                     status="active"
                   />

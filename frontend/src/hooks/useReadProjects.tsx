@@ -16,12 +16,12 @@ export default function useReadProjects() {
 
   const processedData: ProjectType[] = data?.map((p) => {
     return {
-      id: p.id,
+      id: Number(p.id),
       name: p.name,
       description: p.description,
       grantAmount: Number(p.grantTotal),
       apy: Number(p.monthlyYield) / 100,
-      nInstallments: p.period,
+      nInstallments: Number(p.period),
       investedAmount: Number(p.grantTotal) * 0.2,
     };
   });

@@ -2,8 +2,9 @@ import { ProjectType } from "@pages/Startup";
 import { calculateTotalInterest, formatNumber } from "@utils/index";
 // import { calculateMonthlyYield } from "@utils/index";
 import { Button, Form, Input, InputNumber, Typography } from "antd";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { config } from "@data/config";
+import { LoadingOutlined } from "@ant-design/icons";
 
 const { Text, Title } = Typography;
 const currency = config.currency;
@@ -20,20 +21,36 @@ type Props = {
 };
 export default function InvestForm({ startup, onSubmit, onCancel }: Props) {
   const [amountToInvest, setAmountToInvest] = useState(0);
+  const [ethToFiatRatio, setEthToFiatRatio] = useState(null);
   // const monthlyYield = calculateMonthlyYield(
   //   amountToInvest,
   //   startup.apy,
   //   startup.nInstallments
   // );
 
-  const maxAmount = startup.grantAmount - startup.investedAmount
+  const fiatToInvest =
+    ethToFiatRatio !== null ? amountToInvest * ethToFiatRatio : null;
+
+  useEffect(() => {
+    const fn = async () => {
+      const response = await fetch(
+        "https://cors-anywhere.herokuapp.com/https://api.coingecko.com/api/v3/simple/price?ids=ethereum,tether&vs_currencies=usd"
+      );
+      const data = await response.json();
+      const ethToUsdtRate = data.ethereum.usd / data.tether.usd;
+      return ethToUsdtRate;
+    };
+    fn().then((rate) => setEthToFiatRatio(rate));
+  }, []);
+
+  const maxAmount = startup.grantAmount - startup.investedAmount;
 
   const apy = startup.apy;
   const totalInterest =
-    amountToInvest === null
+    fiatToInvest === null
       ? null
       : calculateTotalInterest(
-          amountToInvest,
+          fiatToInvest,
           startup.apy,
           startup.nInstallments
         );
@@ -42,11 +59,14 @@ export default function InvestForm({ startup, onSubmit, onCancel }: Props) {
     amountToInvest / startup.nInstallments + monthlyInterest;
   return (
     <>
-      <Text>Invest up to {currency}{formatNumber(maxAmount)}</Text>
+      <Text>
+        Invest up to {currency}
+        {formatNumber(maxAmount)}
+      </Text>
       <Form
         {...layout}
         name="nest-messages"
-        onFinish={() => onSubmit(amountToInvest)}
+        onFinish={() => onSubmit(fiatToInvest)}
         onAbort={onCancel}
       >
         <div
@@ -60,19 +80,29 @@ export default function InvestForm({ startup, onSubmit, onCancel }: Props) {
             name={["investmentAmount"]}
             rules={[
               {
-                type: "number",
+                // type: "number",
                 min: 0,
                 max: maxAmount,
               },
             ]}
           >
-            <InputNumber
-              placeholder={"Amount to invest"}
-              addonAfter={currency}
-              value={amountToInvest}
-              onChange={(newValue) => setAmountToInvest(newValue || 0)}
-              style={{ width: "100%" }}
-            />
+            <div>
+              <InputNumber
+                placeholder={"Amount to invest"}
+                addonAfter="ETH"
+                value={amountToInvest}
+                onChange={(newValue) => setAmountToInvest(newValue || 0)}
+                style={{ width: "100%" }}
+              />
+              <div>
+                {ethToFiatRatio ? (
+                  <>
+                    {currency}
+                    {fiatToInvest.toFixed(2)}
+                  </>
+                ) : <><LoadingOutlined/><span>Fetching conversion rates...</span></>}
+              </div>
+            </div>
           </Form.Item>
 
           <div>
@@ -80,7 +110,7 @@ export default function InvestForm({ startup, onSubmit, onCancel }: Props) {
             <Text>APY: {(startup.apy * 100).toFixed(2)}%</Text>
             <br />
             <Text>
-              {
+              {fiatToInvest && (
                 <>
                   Interest: {currency}
                   {totalInterest.toFixed(2)} paid over {startup.nInstallments}{" "}
@@ -92,7 +122,7 @@ export default function InvestForm({ startup, onSubmit, onCancel }: Props) {
                   Monthly Income: {currency}
                   {monthlyPayback.toFixed(2)}
                 </>
-              }
+              )}
             </Text>
           </div>
         </div>
