@@ -7,55 +7,96 @@ import {
 
 describe("Staking", function () {
   // Reusable deployment fixture to create a fresh contract instance for each test
+
+  async function deployProjectSubmission() {
+    const [deployer] = await ethers.getSigners();
+
+    const contractFactory = await ethers.getContractFactory(
+      "ProjectSubmission"
+    );
+    const contract = await contractFactory.deploy({ from: deployer });
+
+    return { contract, deployer };
+  }
+
   async function deployStakingContract() {
     const [deployer] = await ethers.getSigners();
     const contractFactory = await ethers.getContractFactory("Staking");
 
-    const testTokenAddress = "0x0000000000000000000000000000000000000000"; // Replace with any address
+    const mockToken = await ethers.getContractFactory("MockERC20Token");
+    const initialBalance = ethers.parseEther("1000"); // Initial balance of 1000 tokens
+    const token = await mockToken.deploy(
+      "Mock Token",
+      "MOCK",
+      deployer.address,
+      initialBalance
+    );
 
-    const contract = await contractFactory.deploy(testTokenAddress, {
-      from: deployer,
-    });
-    return { contract, deployer };
+    expect(await token.balanceOf(deployer.address)).to.equal(initialBalance);
+
+    const { contract: _contract, deployer: _deployer } = await loadFixture(
+      deployProjectSubmission
+    );
+
+    const contract = await contractFactory.deploy(
+      token.getAddress(),
+      _contract.getAddress(),
+      {
+        from: deployer,
+      }
+    );
+    return { contract, deployer, token };
   }
 
   describe("stakeOnProject", function () {
     it("should allow staking on a project", async function () {
-      const { contract, deployer } = await loadFixture(
-        deployStakingContract
-        // "0x4D6DEEE55785f033d00005Ade08D035B1537A5d9" <- eth faucet address
-      ); // Replace with a real ERC-20 token address
+      const { contract, deployer, token } = await loadFixture(deployStakingContract); // Replace with a real ERC-20 token address
 
       const projectId = 1;
-      const stakeAmount = 100;
+      const stakeAmount = ethers.parseEther("100");
 
-      // await expect(contract.stakeOnProject(projectId, stakeAmount))
-      //   .to.emit(contract, "ProjectStaked")
-      //   .withArgs(deployer, projectId, stakeAmount);
+      const userWallet = ethers.Wallet.createRandom().connect(ethers.provider);
 
-      // const userStakes = await contract.userStakes(deployer);
-      
-      // expect(userStakes[projectId]).to.equal(stakeAmount);
-
-      // const contractBalance = await contract.stakingToken.balanceOf(
-      //   contract.address
+      // const mockToken = await ethers.getContractFactory("MockERC20Token");
+      // const initialBalance = ethers.parseEther("1000"); // Initial balance of 1000 tokens
+      // const token = await mockToken.deploy(
+      //   "Mock Token",
+      //   "MOCK",
+      //   deployer.address,
+      //   initialBalance
       // );
-      // expect(contractBalance).to.equal(stakeAmount);
-    });
 
-    it("should revert if the stake amount is zero", async function () {
-      const { contract } = await loadFixture(deployStakingContract);
+      deployer.sendTransaction({
+        to: userWallet.address,
+        value: ethers.parseEther("1"),
+      });
 
-      const projectId = 1;
-      const zeroStakeAmount = 0;
+      // Increase the balance of userWallet
+      await token.transfer(
+        userWallet.address,
+        stakeAmount + ethers.parseEther("1")
+      ); // Adding extra 1 ETH worth of tokens
+
+      expect(await token.balanceOf(userWallet.address)).to.equal(
+        stakeAmount + ethers.parseEther("1")
+      );
+
+
+      await token
+        .connect(userWallet)
+        .approve(contract.getAddress(), stakeAmount);
+
+
+      expect(await token.allowance(userWallet.address, contract.getAddress())).to.equal(stakeAmount);
 
       await expect(
-        contract.stakeOnProject(projectId, zeroStakeAmount)
-      ).to.be.revertedWith("Stake amount cannot be zero");
+        contract.connect(userWallet).stakeOnProject(projectId, stakeAmount)
+      )
+        .to.emit(contract, "ProjectStaked")
+        .withArgs(userWallet.address, projectId, stakeAmount);
     });
 
     // Add more tests for edge cases, insufficient allowance, etc.
   });
-
   // Add tests for other functions in the Staking contract (e.g., yield distribution)
 });
