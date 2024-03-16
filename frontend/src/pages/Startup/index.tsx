@@ -97,13 +97,13 @@ export default function Home() {
   const verifyProof = async (proof) => {
     console.log("proof", proof);
     const response = await fetch(
-      "https://developer.worldcoin.org/api/v1/verify/app_staging_129259332fd6f93d4fabaadcc5e4ff9d",
+      "https://poltapi.bitnata.com/api/world_coin/verify",
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ ...proof, action: "test" }),
+        body: JSON.stringify({ ...proof, action: "create-project" }),
       }
     );
     if (response.ok) {
