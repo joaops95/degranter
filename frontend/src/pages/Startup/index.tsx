@@ -22,8 +22,12 @@ import contractAddress from "../../../../backend/ignition/deployments/chain-8453
 
 import { initialProjects } from "@data/projects";
 import { config } from "@data/config";
+import useReadProjects from "@hooks/useReadProjects";
+import useAddProject from "@hooks/useAddProject";
+import { useNotification } from "@hooks/NotificationContext";
+import { LoadingOutlined } from "@ant-design/icons";
 
-const { currency } = config
+const { currency } = config;
 
 const { Title, Text } = Typography;
 
@@ -57,33 +61,43 @@ function Detail({ name, value }) {
 
 export default function Home() {
   const [initLoading, setInitLoading] = useState(false);
-  const [loading, setLoading] = useState(false);
-  // const [data, setData] = useState<ProjectType[]>(initialProjects);
-  const [showAddGrant, setShotAddGrant] = useState(false);
-  const { writeContract } = useWriteContract();
+  const [addingGrant, setAddingGrant] = useState(false);
+  const { api: notificationApi } = useNotification();
 
-  // const provider = useReadContract(TokenArtifact, contractAddress["ProjectSubmissionModule#ProjectSubmission"], "getProjects", []);
-  // console.log(provider)
-  const projects = useReadContract({
-    address: contractAddress["ProjectSubmissionModule#ProjectSubmission"],
-    abi: TokenArtifact.abi,
-    functionName: "getProjects",
-    args: [],
-  });
-  console.log(projects.data);
+  const [showAddGrant, setShotAddGrant] = useState(false);
+  const { addProject } = useAddProject();
+
+  const { projects, isLoading, refetch: refreshProjects } = useReadProjects();
 
   const closeModal = () => setShotAddGrant(false);
+  const openModal = () => setShotAddGrant(true);
 
   const addGrant = (formData) => {
+    setAddingGrant(true)
     const { name, description, grantAmount, apy, nInstallments } = formData;
-
-    writeContract({
-      abi: TokenArtifact.abi,
-      address: contractAddress["ProjectSubmissionModule#ProjectSubmission"],
-      functionName: "submitProject",
-      args: [name, description, grantAmount, apy, nInstallments],
+    addProject({
+      name,
+      description,
+      grantAmount,
+      apy,
+      nInstallments,
+      onSuccess: (data, variables, context) => {
+        console.log("Success!", data, variables, context);
+        setAddingGrant(false);
+        notificationApi.success({
+          message: "Successfully created project on chain",
+          description: "You should see the results in a brief moment",
+        });
+        refreshProjects();
+      },
+      onError: (error, variables, context) => {
+        setAddingGrant(false);
+        notificationApi.error({
+          message: "Failed to add project on chain",
+          description: error.details,
+        });
+      },
     });
-
     closeModal();
   };
 
@@ -98,79 +112,78 @@ export default function Home() {
       >
         <AddGrantForm onSubmit={addGrant} onCancel={closeModal} />
       </Modal>
-      {projects.data && projects.data.length > 0 && (
-        <List
-          className="demo-loadmore-list"
-          header={
-            <div className="d-flex">
-              <Button onClick={() => setShotAddGrant(true)}>
-                {addGrantLabel}
-              </Button>
-            </div>
-          }
-          loading={initLoading}
-          itemLayout="horizontal"
-          dataSource={projects.data}
-          renderItem={(item) => (
-            <List.Item
-              actions={
-                [
-                  // <a key="list-loadmore-edit">edit</a>,
-                  // <a key="list-loadmore-more">more</a>,
-                ]
-              }
+      <List
+        className="demo-loadmore-list"
+        header={
+          <div className="d-flex">
+            <Button
+              onClick={() => setShotAddGrant(true)}
+              disabled={addingGrant}
             >
-              <Skeleton avatar title={false} loading={false} active>
-                <List.Item.Meta
-                  avatar={
-                    <Avatar
-                      src={
-                        item.logo ||
-                        `https://api.dicebear.com/7.x/identicon/svg?seed=${item.id}`
-                      }
-                    />
-                  }
-                  title={item.name}
-                  description={item.description}
+              {addGrantLabel}
+            </Button>
+            {
+              addingGrant && <><LoadingOutlined/><span>Tokenizing your grant...</span></>
+            }
+          </div>
+        }
+        loading={isLoading}
+        itemLayout="horizontal"
+        dataSource={projects}
+        renderItem={(item) => (
+          <List.Item
+            actions={
+              [
+                // <a key="list-loadmore-edit">edit</a>,
+                // <a key="list-loadmore-more">more</a>,
+              ]
+            }
+          >
+            <Skeleton avatar title={false} loading={false} active>
+              <List.Item.Meta
+                avatar={
+                  <Avatar
+                    src={
+                      item.logo ||
+                      `https://api.dicebear.com/7.x/identicon/svg?seed=${item.id}`
+                    }
+                  />
+                }
+                title={item.name}
+                description={item.description}
+              />
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "row",
+                  minWidth: "400px",
+                }}
+              >
+                <Detail
+                  name="Grant Amount"
+                  value={`${currency}${formatNumber(item.grantAmount)}`}
                 />
-                {/* <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "row",
-                    minWidth: "400px",
-                  }}
+                <Detail name="APY" value={`${item.apy * 100}%`} />
+                <Detail name="Limit" value={`${item.nInstallments} months`} />
+                <Tooltip
+                  title={`Received ${currency}${formatNumber(
+                    item.investedAmount
+                  )} out of ${currency}${formatNumber(item.grantAmount)}`}
                 >
-                  <Detail
-                    name="Grant Amount"
-                    value={`${formatNumber(item.grantAmount)}£`}
-                  />
-                  <Detail name="APY" value={`${item.apy * 100}%`} />
-                  <Detail
-                    name="Limit"
-                    value={`${item.nInstallments} months`}
-                  />
-                  <Tooltip
-                    title={`Received ${formatNumber(
-                      item.investedAmount
-                    )}£ out of ${formatNumber(item.grantAmount)}£`}
-                  >
-                    <Progress
-                      percent={
-                        (item.investedAmount / item.grantAmount) * 100
-                      }
-                      // format={(percent) =>
+                  <Progress
+                    percent={(item.investedAmount / item.grantAmount) * 100}
+                    // format={(percent) =>
 
-                      // }
-                      showInfo={false}
-                      status="active"
-                    />
-                  </Tooltip>
-                </div> */}
-              </Skeleton>
-            </List.Item>
-          )}
-        />
-      )}
+                    // }
+                    showInfo={false}
+                    status="active"
+                  />
+                </Tooltip>
+              </div>
+            </Skeleton>
+          </List.Item>
+        )}
+      />
     </>
   );
 }

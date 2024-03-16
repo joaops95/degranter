@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import { useWeb3Modal } from "@web3modal/wagmi/react";
 import { useAccount, useDisconnect } from "wagmi";
 // import logo from '@assets/full-logo.png'
-import logo from "@assets/logo.svg";
+import logo from "@assets/logo-no-background.png";
 
 export default function Navbar() {
   const { open } = useWeb3Modal();
