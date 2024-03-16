@@ -85,7 +85,7 @@ export default function Home() {
 
   return (
     <>
-      <Title level={2}>Available Startups</Title>
+      <Title level={2}>Available Investments</Title>
       {selectedStartup && (
         <Modal
           title={`${investLabel} in ${selectedStartup?.name}`}

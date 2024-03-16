@@ -1,5 +1,5 @@
 import { ProjectType } from "@pages/Startup";
-import { calculateTotalInterest } from "@utils/index";
+import { calculateTotalInterest, formatNumber } from "@utils/index";
 // import { calculateMonthlyYield } from "@utils/index";
 import { Button, Form, Input, InputNumber, Typography } from "antd";
 import { useState } from "react";
@@ -42,7 +42,7 @@ export default function InvestForm({ startup, onSubmit, onCancel }: Props) {
     amountToInvest / startup.nInstallments + monthlyInterest;
   return (
     <>
-      <Text>Invest up to {currency}{maxAmount}</Text>
+      <Text>Invest up to {currency}{formatNumber(maxAmount)}</Text>
       <Form
         {...layout}
         name="nest-messages"
@@ -81,8 +81,6 @@ export default function InvestForm({ startup, onSubmit, onCancel }: Props) {
             <br />
             <Text>
               {
-                // APY
-                //
                 <>
                   Interest: {currency}
                   {totalInterest.toFixed(2)} paid over {startup.nInstallments}{" "}
