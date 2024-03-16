@@ -20,9 +20,14 @@ import { WagmiProvider } from "wagmi";
 import TokenArtifact from "../../../../backend/artifacts/contracts/ProjectSubmission.sol/ProjectSubmission.json";
 import contractAddress from "../../../../backend/ignition/deployments/chain-84532/deployed_addresses.json";
 
+import { initialProjects } from "@data/projects";
+import { config } from "@data/config";
+
+const { currency } = config
+
 const { Title, Text } = Typography;
 
-interface ProjectType {
+export interface ProjectType {
   id: number;
   name: string;
   description: string;
@@ -34,36 +39,6 @@ interface ProjectType {
 }
 
 const addGrantLabel = "Add Grant";
-
-const initialProjects: ProjectType[] = [
-  {
-    id: 1,
-    name: "Tuskable",
-    description: "The most promising startup in startup lisboa",
-    grantAmount: 30000,
-    apy: 0.1,
-    nInstallments: 12,
-    investedAmount: 1000,
-  },
-  {
-    id: 2,
-    name: "Mystic",
-    description: "The most promising startup in Pool Side",
-    grantAmount: 15000,
-    apy: 0.1,
-    nInstallments: 12,
-    investedAmount: 300,
-  },
-  {
-    id: 3,
-    name: "Super TTT",
-    description: "The coolest game ever",
-    grantAmount: 1000,
-    apy: 0.1,
-    nInstallments: 12,
-    investedAmount: 100,
-  },
-];
 
 function Detail({ name, value }) {
   return (
@@ -116,7 +91,7 @@ export default function Home() {
     <>
       <Title level={2}>Your grants</Title>
       <Modal
-        title={addGrantLabel}
+        title={`addGrantLabel`}
         open={showAddGrant}
         footer={<></>}
         onCancel={closeModal}
