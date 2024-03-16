@@ -1,6 +1,6 @@
 import "./styles.css";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   Avatar,
   Button,
@@ -13,6 +13,12 @@ import {
 } from "antd";
 import AddGrantForm from "@components/AddGrantForm";
 import { formatNumber, max } from "../../utils";
+import { useReadContract, useWriteContract } from "wagmi";
+import { ethers } from "ethers";
+import { WagmiProvider } from "wagmi";
+
+import TokenArtifact from "../../../../backend/artifacts/contracts/ProjectSubmission.sol/ProjectSubmission.json";
+import contractAddress from "../../../../backend/ignition/deployments/chain-84532/deployed_addresses.json";
 
 const { Title, Text } = Typography;
 
@@ -77,24 +83,32 @@ function Detail({ name, value }) {
 export default function Home() {
   const [initLoading, setInitLoading] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<ProjectType[]>(initialProjects);
+  // const [data, setData] = useState<ProjectType[]>(initialProjects);
   const [showAddGrant, setShotAddGrant] = useState(false);
+  const { writeContract } = useWriteContract();
+
+  // const provider = useReadContract(TokenArtifact, contractAddress["ProjectSubmissionModule#ProjectSubmission"], "getProjects", []);
+  // console.log(provider)
+  const projects = useReadContract({
+    address: contractAddress["ProjectSubmissionModule#ProjectSubmission"],
+    abi: TokenArtifact.abi,
+    functionName: "getProjects",
+    args: [],
+  });
+  console.log(projects.data);
 
   const closeModal = () => setShotAddGrant(false);
 
-  const addGrant = (d) => {
-    setData((prev) => [
-      ...prev,
-      {
-        id: (max<number>(data.map((p) => p.id)) || 0) + 1,
-        name: d.name,
-        description: d.description,
-        grantAmount: d.grantAmount,
-        apy: d.apy / 100,
-        nInstallments: d.nInstallments,
-        investedAmount: 0,
-      },
-    ]);
+  const addGrant = (formData) => {
+    const { name, description, grantAmount, apy, nInstallments } = formData;
+
+    writeContract({
+      abi: TokenArtifact.abi,
+      address: contractAddress["ProjectSubmissionModule#ProjectSubmission"],
+      functionName: "submitProject",
+      args: [name, description, grantAmount, apy, nInstallments],
+    });
+
     closeModal();
   };
 
@@ -109,72 +123,79 @@ export default function Home() {
       >
         <AddGrantForm onSubmit={addGrant} onCancel={closeModal} />
       </Modal>
-      <List
-        className="demo-loadmore-list"
-        header={
-          <div className="d-flex">
-            <Button onClick={() => setShotAddGrant(true)}>
-              {addGrantLabel}
-            </Button>
-          </div>
-        }
-        loading={initLoading}
-        itemLayout="horizontal"
-        dataSource={data}
-        renderItem={(item) => (
-          <List.Item
-            actions={
-              [
-                // <a key="list-loadmore-edit">edit</a>,
-                // <a key="list-loadmore-more">more</a>,
-              ]
-            }
-          >
-            <Skeleton avatar title={false} loading={false} active>
-              <List.Item.Meta
-                avatar={
-                  <Avatar
-                    src={
-                      item.logo ||
-                      `https://api.dicebear.com/7.x/identicon/svg?seed=${item.id}`
-                    }
-                  />
-                }
-                title={item.name}
-                description={item.description}
-              />
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "row",
-                  minWidth: "400px",
-                }}
-              >
-                <Detail
-                  name="Grant Amount"
-                  value={`${formatNumber(item.grantAmount)}£`}
+      {projects.data && projects.data.length > 0 && (
+        <List
+          className="demo-loadmore-list"
+          header={
+            <div className="d-flex">
+              <Button onClick={() => setShotAddGrant(true)}>
+                {addGrantLabel}
+              </Button>
+            </div>
+          }
+          loading={initLoading}
+          itemLayout="horizontal"
+          dataSource={projects.data}
+          renderItem={(item) => (
+            <List.Item
+              actions={
+                [
+                  // <a key="list-loadmore-edit">edit</a>,
+                  // <a key="list-loadmore-more">more</a>,
+                ]
+              }
+            >
+              <Skeleton avatar title={false} loading={false} active>
+                <List.Item.Meta
+                  avatar={
+                    <Avatar
+                      src={
+                        item.logo ||
+                        `https://api.dicebear.com/7.x/identicon/svg?seed=${item.id}`
+                      }
+                    />
+                  }
+                  title={item.name}
+                  description={item.description}
                 />
-                <Detail name="APY" value={`${item.apy * 100}%`} />
-                <Detail name="Limit" value={`${item.nInstallments} months`} />
-                <Tooltip
-                  title={`Received ${formatNumber(
-                    item.investedAmount
-                  )}£ out of ${formatNumber(item.grantAmount)}£`}
+                {/* <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "row",
+                    minWidth: "400px",
+                  }}
                 >
-                  <Progress
-                    percent={(item.investedAmount / item.grantAmount) * 100}
-                    // format={(percent) =>
-
-                    // }
-                    showInfo={false}
-                    status="active"
+                  <Detail
+                    name="Grant Amount"
+                    value={`${formatNumber(item.grantAmount)}£`}
                   />
-                </Tooltip>
-              </div>
-            </Skeleton>
-          </List.Item>
-        )}
-      />
+                  <Detail name="APY" value={`${item.apy * 100}%`} />
+                  <Detail
+                    name="Limit"
+                    value={`${item.nInstallments} months`}
+                  />
+                  <Tooltip
+                    title={`Received ${formatNumber(
+                      item.investedAmount
+                    )}£ out of ${formatNumber(item.grantAmount)}£`}
+                  >
+                    <Progress
+                      percent={
+                        (item.investedAmount / item.grantAmount) * 100
+                      }
+                      // format={(percent) =>
+
+                      // }
+                      showInfo={false}
+                      status="active"
+                    />
+                  </Tooltip>
+                </div> */}
+              </Skeleton>
+            </List.Item>
+          )}
+        />
+      )}
     </>
   );
 }
